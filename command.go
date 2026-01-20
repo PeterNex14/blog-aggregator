@@ -1,14 +1,21 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
+	"os"
+	"time"
 
 	"github.com/PeterNex14/blog_aggregator/internal/config"
+	"github.com/PeterNex14/blog_aggregator/internal/database"
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type state struct {
+	db 		*database.Queries
 	cfg 	*config.Config
 }
 
@@ -27,12 +34,59 @@ func handlerLogin(s *state, cmd command) error {
 		return errors.New("username is required")
 	}
 
-	err := s.cfg.SetUser(cmd.Args[0])
+	user, err := s.db.GetUser(
+		context.Background(),
+		cmd.Args[0],
+	)
+
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("user doesn't exists")
+			os.Exit(1)
+		}
+	}
+
+	
+	if err := s.cfg.SetUser(user.Name); err != nil {
 		return err
 	}
 
 	fmt.Println("User has been set")
+	return nil
+}
+
+func handlerRegister(s *state, cmd command) error {
+
+	user, err := s.db.CreateUser(
+		context.Background(),
+		database.CreateUserParams{
+			ID: uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Name: cmd.Args[0],
+		},
+	)
+
+	if err != nil {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
+			fmt.Println("Postgres error:", pgErr.Message)
+			fmt.Println("user already exist")
+			os.Exit(1)
+		} else {
+			return err
+		}
+	}
+
+	if err := s.cfg.SetUser(user.Name); err != nil {
+		return err
+	}
+
+	fmt.Println("User successfuly created")
+	fmt.Printf("uuid : %v\n", user.ID)
+	fmt.Printf("created_at : %v\n", user.CreatedAt)
+	fmt.Printf("updated_at : %v\n", user.UpdatedAt)
+	fmt.Printf("name : %s\n", user.Name)
+
 	return nil
 }
 
@@ -49,10 +103,4 @@ func (c *commands) run(s *state, cmd command) error {
 
 func (c *commands) register(name string, f func(*state, command) error)  {
 	c.registeredCommands[name] = f
-}
-
-
-func cleanInput(text string) []string {
-	texts := strings.Fields(strings.ToLower(text))
-	return texts
 }
