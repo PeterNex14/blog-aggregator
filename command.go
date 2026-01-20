@@ -135,6 +135,46 @@ func handleRSSRequest(s *state, cmd command) error {
 	return nil
 }
 
+func handleAddFeed(s *state, cmd command) error {
+	if len(cmd.Args) != 2 {
+		fmt.Println("Not enough arguments!")
+		fmt.Println()
+		fmt.Println("Usage:")
+		fmt.Println("go run . addfeed <name> <url>")
+		os.Exit(1)
+	}
+
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("Error Retrieve User Data: %v", err)
+	}
+
+	connect, err := s.db.CreateFeed(
+		context.Background(),
+		database.CreateFeedParams{
+			ID: uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Name: cmd.Args[0],
+			Url: cmd.Args[1],
+			UserID: user.ID,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("Error Creating Feed, %v", err)
+	}
+
+	fmt.Printf("id: %v\n", connect.ID)
+	fmt.Printf("created_at: %v\n", connect.CreatedAt)
+	fmt.Printf("updated_at: %v\n", connect.UpdatedAt)
+	fmt.Printf("name: %v\n", connect.Name)
+	fmt.Printf("url: %v\n", connect.Url)
+	fmt.Printf("user_id: %v\n", connect.UserID)
+
+	return nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	f, ok := c.registeredCommands[cmd.Name]
 

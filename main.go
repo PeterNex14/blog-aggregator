@@ -35,6 +35,7 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUserList)
 	cmds.register("agg", handleRSSRequest)
+	cmds.register("addfeed", handleAddFeed)
 
 	input := os.Args
 
@@ -52,7 +53,4 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-
-	
 }
