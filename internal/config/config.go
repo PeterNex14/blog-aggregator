@@ -13,17 +13,17 @@ type Config struct {
 
 const configFileName = ".gatorconfig.json"
 
-func Read() (Config, error) {
+func Read() (*Config, error) {
 	var config Config
 
 	path, err := getConfigFilePath()
 	if err != nil {
-		return config, err
+		return &config, err
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		return config, err
+		return &config, err
 	}
 
 	defer file.Close()
@@ -31,10 +31,10 @@ func Read() (Config, error) {
 	decoder := json.NewDecoder(file)
 
 	if err := decoder.Decode(&config); err != nil {
-		return config, err
+		return &config, err
 	}
 
-	return config, nil
+	return &config, nil
 }
 
 func (cfg *Config) SetUser(user string) error {
