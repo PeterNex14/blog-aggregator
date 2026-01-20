@@ -90,6 +90,16 @@ func handlerRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	err := s.db.RemoveUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("couldn't delete users: %w", err)
+	} 
+
+	fmt.Println("Data Reset Successfuly")
+	return nil
+}
+
 
 func (c *commands) run(s *state, cmd command) error {
 	f, ok := c.registeredCommands[cmd.Name]
