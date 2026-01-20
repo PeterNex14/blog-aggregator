@@ -100,6 +100,29 @@ func handlerReset(s *state, cmd command) error {
 	return nil
 }
 
+func handlerUserList(s *state, cmd command) error {
+	list, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve users data: %v", err)
+	}
+
+	if len(list) == 0 {
+		fmt.Println("There is no existing data")
+		os.Exit(1)
+	}
+
+	for _, value := range list{
+		if value.Name == s.cfg.CurrentUserName {
+			fmt.Printf("* %s (current)\n", value.Name)
+		} else {
+			fmt.Printf("* %s\n", value.Name)
+		}
+	}
+
+	return nil
+
+}
+
 
 func (c *commands) run(s *state, cmd command) error {
 	f, ok := c.registeredCommands[cmd.Name]
