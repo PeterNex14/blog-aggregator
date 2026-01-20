@@ -165,12 +165,30 @@ func handleAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("Error Creating Feed, %v", err)
 	}
 
+	fmt.Println("Feeds saved successfuly")
+	fmt.Println()
 	fmt.Printf("id: %v\n", connect.ID)
 	fmt.Printf("created_at: %v\n", connect.CreatedAt)
 	fmt.Printf("updated_at: %v\n", connect.UpdatedAt)
 	fmt.Printf("name: %v\n", connect.Name)
 	fmt.Printf("url: %v\n", connect.Url)
 	fmt.Printf("user_id: %v\n", connect.UserID)
+
+	return nil
+}
+
+func handleFeeds(s *state, cmd command) error {
+	data, err := s.db.GetFeedsUser(context.Background())
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve data: %v", err)
+	}
+
+	for _, item := range data {
+		fmt.Printf("Title: %v\n", item.Name)
+		fmt.Printf("URL: %v\n", item.Url)
+		fmt.Printf("Name: %v\n", item.UserName)
+		fmt.Println()
+	}
 
 	return nil
 }

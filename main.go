@@ -36,6 +36,8 @@ func main() {
 	cmds.register("users", handlerUserList)
 	cmds.register("agg", handleRSSRequest)
 	cmds.register("addfeed", handleAddFeed)
+	cmds.register("feeds", handleFeeds)
+	
 
 	input := os.Args
 
