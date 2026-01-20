@@ -123,6 +123,17 @@ func handlerUserList(s *state, cmd command) error {
 
 }
 
+func handleRSSRequest(s *state, cmd command) error {
+	data, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		fmt.Printf("Error occured: %v", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(data)
+
+	return nil
+}
 
 func (c *commands) run(s *state, cmd command) error {
 	f, ok := c.registeredCommands[cmd.Name]

@@ -34,6 +34,7 @@ func main() {
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUserList)
+	cmds.register("agg", handleRSSRequest)
 
 	input := os.Args
 
