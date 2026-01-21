@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/PeterNex14/blog_aggregator/internal/config"
@@ -93,7 +95,7 @@ func handlerRegister(s *state, cmd command) error {
 func handlerReset(s *state, cmd command) error {
 	err := s.db.RemoveUsers(context.Background())
 	if err != nil {
-		return fmt.Errorf("couldn't delete users: %w", err)
+		return fmt.Errorf("couldn't delete users: %w\n", err)
 	} 
 
 	fmt.Println("Data Reset Successfuly")
@@ -103,7 +105,7 @@ func handlerReset(s *state, cmd command) error {
 func handlerUserList(s *state, cmd command) error {
 	list, err := s.db.GetUsers(context.Background())
 	if err != nil {
-		return fmt.Errorf("Failed to retrieve users data: %v", err)
+		return fmt.Errorf("Failed to retrieve users data: %v\n", err)
 	}
 
 	if len(list) == 0 {
@@ -133,7 +135,7 @@ func handlerAgg(s *state, cmd command) error {
 	}
 	duration, err := time.ParseDuration(cmd.Args[0])
 	if err != nil {
-		return fmt.Errorf("Error parsing time argument: %w", err)
+		return fmt.Errorf("Error parsing time argument: %w\n", err)
 	}
 
 	fmt.Printf("Collecting feeds every %s\n", duration)
@@ -171,7 +173,7 @@ func handleAddFeed(s *state, cmd command, user database.User) error {
 	
 
 	if err != nil {
-		return fmt.Errorf("Error Creating Feed, %v", err)
+		return fmt.Errorf("Error Creating Feed, %v\n", err)
 	}
 
 	feed_follow, err := s.db.CreateFeedFollow(
@@ -186,7 +188,7 @@ func handleAddFeed(s *state, cmd command, user database.User) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("Error following newly created feed: %w", err)
+		return fmt.Errorf("Error following newly created feed: %w\n", err)
 	}
 
 	fmt.Println("Feeds saved successfuly")
@@ -205,7 +207,7 @@ func handleAddFeed(s *state, cmd command, user database.User) error {
 func handleFeeds(s *state, cmd command) error {
 	data, err := s.db.GetFeedsUser(context.Background())
 	if err != nil {
-		return fmt.Errorf("Failed to retrieve data: %v", err)
+		return fmt.Errorf("Failed to retrieve data: %v\n", err)
 	}
 
 	for _, item := range data {
@@ -222,7 +224,7 @@ func handleFollow(s *state, cmd command, user database.User) error {
 
 	feed, err := s.db.GetFeedsByUrl(context.Background(), cmd.Args[0])
 	if err != nil {
-		return fmt.Errorf("Error occured when retrieving feed: %w", err)
+		return fmt.Errorf("Error occured when retrieving feed: %w\n", err)
 	}
 
 
@@ -247,7 +249,7 @@ func handleFollowing(s *state, cmd command, user database.User) error {
 
 	data, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
-		return fmt.Errorf("Error occured when retrieving following data: %w", err)
+		return fmt.Errorf("Error occured when retrieving following data: %w\n", err)
 	}
 
 	for _, item := range data {
@@ -261,7 +263,7 @@ func handleUnfollow(s *state, cmd command, user database.User) error {
 
 	feed, err := s.db.GetFeedsByUrl(context.Background(), cmd.Args[0])
 	if err != nil {
-		return fmt.Errorf("Error occured when retrieve feed data:")
+		return fmt.Errorf("Error occured when retrieve feed data: %w\n", err)
 	}
 
 	err = s.db.DeleteFollowByUserAndFeedId(
@@ -273,7 +275,7 @@ func handleUnfollow(s *state, cmd command, user database.User) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("Failed to Delete Data: %w", err)
+		return fmt.Errorf("Failed to Delete Data: %w\n", err)
 	}
 
 	fmt.Println("Feeds successfully unfollowed")
@@ -285,22 +287,98 @@ func scrapeFeeds(s *state, cmd command) error {
 	var ctx = context.Background()
 	next_feed, err := s.db.GetNextFeedToFetch(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to fetch next feed: %w", err)
+		return fmt.Errorf("Failed to fetch next feed: %w\n", err)
 	}
 
 	err = s.db.MarkFeedFetched(ctx, next_feed.ID)
 	if err != nil {
-		return fmt.Errorf("Failed to mark feed: %w", err)
+		return fmt.Errorf("Failed to mark feed: %w\n", err)
 	}
 
 	fetch_feed, err := fetchFeed(ctx, next_feed.Url)
 	if err != nil {
-		return fmt.Errorf("Failed to fetch current feed: %w", err)
+		return fmt.Errorf("Failed to fetch current feed: %w\n", err)
 	}
 
 	for _, value := range fetch_feed.Channel.Item {
-		fmt.Println(value.Title)
+		description := sql.NullString{
+			String: value.Description,
+			Valid: value.Description != "",
+		}
+
+		published_at, err := time.Parse(
+			time.RFC1123Z,
+			value.PubDate,
+		)
+		
+		if err != nil {
+			log.Printf("Error parsing publish date: %v\n", err)
+			continue
+		}
+		
+
+		_, err = s.db.CreatePost(
+			ctx,
+			database.CreatePostParams{
+				ID: uuid.New(),
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+				Title: value.Title,
+				Url: value.Link,
+				Description: description,
+				PublishedAt: published_at,
+				FeedID: next_feed.ID,
+			},
+		)
+
+		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok {
+				if pqErr.Code == "23505" {
+					continue
+				}
+			}
+			log.Printf("Error creating posts: %v", err)
+			continue
+		}
 	}
+
+	return nil
+}
+
+func handleBrowse(s *state, cmd command, user database.User) error {
+	var limit int32
+	if len(cmd.Args) == 0 {
+		limit = 2
+	} else {
+		number, err := strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			return fmt.Errorf("Error occured: wasn't a valid number. %w", err)
+		}
+		limit = int32(number)
+	}
+
+
+	data, err := s.db.GetPostsByFeed(
+		context.Background(),
+		database.GetPostsByFeedParams{
+			UserID: user.ID,
+			Limit: limit,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("Error occured when retrieving posts: %w\n", err)
+	}
+
+	for _, value := range data {
+		fmt.Println()
+		fmt.Printf("Title: %v\n", value.Title)
+		fmt.Printf("Description: %v\n", value.Description.String)
+		fmt.Printf("Url: %v\n", value.Url)
+		fmt.Printf("Published At: %v\n", value.PublishedAt)
+		fmt.Println()
+	}
+
 
 	return nil
 }
