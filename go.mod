@@ -1,4 +1,4 @@
-module github.com/PeterNex14/blog_aggregator
+module github.com/PeterNex14/gator
 
 go 1.25.4
 

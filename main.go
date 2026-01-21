@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/PeterNex14/blog_aggregator/internal/config"
-	"github.com/PeterNex14/blog_aggregator/internal/database"
+	"github.com/PeterNex14/gator/internal/config"
+	"github.com/PeterNex14/gator/internal/database"
 	_ "github.com/lib/pq"
 )
 

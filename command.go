@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/PeterNex14/blog_aggregator/internal/config"
-	"github.com/PeterNex14/blog_aggregator/internal/database"
+	"github.com/PeterNex14/gator/internal/config"
+	"github.com/PeterNex14/gator/internal/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
