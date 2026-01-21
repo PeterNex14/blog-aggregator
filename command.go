@@ -161,11 +161,29 @@ func handleAddFeed(s *state, cmd command) error {
 		},
 	)
 
+	
+
 	if err != nil {
 		return fmt.Errorf("Error Creating Feed, %v", err)
 	}
 
+	feed_follow, err := s.db.CreateFeedFollow(
+		context.Background(),
+		database.CreateFeedFollowParams{
+			ID: uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID: user.ID,
+			FeedID: connect.ID,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("Error following newly created feed: %w", err)
+	}
+
 	fmt.Println("Feeds saved successfuly")
+	fmt.Printf("Feed with title %v successfuly followed\n", feed_follow.FeedName)
 	fmt.Println()
 	fmt.Printf("id: %v\n", connect.ID)
 	fmt.Printf("created_at: %v\n", connect.CreatedAt)
@@ -188,6 +206,54 @@ func handleFeeds(s *state, cmd command) error {
 		fmt.Printf("URL: %v\n", item.Url)
 		fmt.Printf("Name: %v\n", item.UserName)
 		fmt.Println()
+	}
+
+	return nil
+}
+
+func handleFollow(s *state, cmd command) error {
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("Error occured when retrieve user: %w", err)
+	}
+
+	feed, err := s.db.GetFeedsByUrl(context.Background(), cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("Error occured when retrieving feed: %w", err)
+	}
+
+
+	feed_follow, err := s.db.CreateFeedFollow(
+		context.Background(),
+		database.CreateFeedFollowParams{
+			ID: uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			UserID: user.ID,
+			FeedID: feed.ID,
+		},
+	)
+
+	fmt.Println("Title: ", feed_follow.FeedName)
+	fmt.Println("Current User: ", feed_follow.UserName)
+
+	return nil 
+}
+
+func handleFollowing(s *state, cmd command) error {
+
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("Error occured when retrieving user data: %w", err)
+	}
+
+	data, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
+	if err != nil {
+		return fmt.Errorf("Error occured when retrieving following data: %w", err)
+	}
+
+	for _, item := range data {
+		fmt.Println(item.FeedName)
 	}
 
 	return nil
