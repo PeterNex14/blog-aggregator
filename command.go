@@ -135,18 +135,13 @@ func handleRSSRequest(s *state, cmd command) error {
 	return nil
 }
 
-func handleAddFeed(s *state, cmd command) error {
+func handleAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
 		fmt.Println("Not enough arguments!")
 		fmt.Println()
 		fmt.Println("Usage:")
 		fmt.Println("go run . addfeed <name> <url>")
 		os.Exit(1)
-	}
-
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("Error Retrieve User Data: %v", err)
 	}
 
 	connect, err := s.db.CreateFeed(
@@ -211,11 +206,7 @@ func handleFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func handleFollow(s *state, cmd command) error {
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("Error occured when retrieve user: %w", err)
-	}
+func handleFollow(s *state, cmd command, user database.User) error {
 
 	feed, err := s.db.GetFeedsByUrl(context.Background(), cmd.Args[0])
 	if err != nil {
@@ -240,12 +231,7 @@ func handleFollow(s *state, cmd command) error {
 	return nil 
 }
 
-func handleFollowing(s *state, cmd command) error {
-
-	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("Error occured when retrieving user data: %w", err)
-	}
+func handleFollowing(s *state, cmd command, user database.User) error {
 
 	data, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
@@ -255,6 +241,30 @@ func handleFollowing(s *state, cmd command) error {
 	for _, item := range data {
 		fmt.Println(item.FeedName)
 	}
+
+	return nil
+}
+
+func handleUnfollow(s *state, cmd command, user database.User) error {
+
+	feed, err := s.db.GetFeedsByUrl(context.Background(), cmd.Args[0])
+	if err != nil {
+		return fmt.Errorf("Error occured when retrieve feed data:")
+	}
+
+	err = s.db.DeleteFollowByUserAndFeedId(
+		context.Background(),
+		database.DeleteFollowByUserAndFeedIdParams{
+			UserID: user.ID,
+			FeedID: feed.ID,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("Failed to Delete Data: %w", err)
+	}
+
+	fmt.Println("Feeds successfully unfollowed")
 
 	return nil
 }
@@ -272,3 +282,4 @@ func (c *commands) run(s *state, cmd command) error {
 func (c *commands) register(name string, f func(*state, command) error)  {
 	c.registeredCommands[name] = f
 }
+

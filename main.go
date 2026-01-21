@@ -35,10 +35,11 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUserList)
 	cmds.register("agg", handleRSSRequest)
-	cmds.register("addfeed", handleAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handleAddFeed))
 	cmds.register("feeds", handleFeeds)
-	cmds.register("follow", handleFollow)
-	cmds.register("following", handleFollowing)
+	cmds.register("follow", middlewareLoggedIn(handleFollow))
+	cmds.register("following", middlewareLoggedIn(handleFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handleUnfollow))
 	
 
 	input := os.Args
